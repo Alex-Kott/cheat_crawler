@@ -1,12 +1,13 @@
 from time import sleep
 from random import randint
 from multiprocessing import Process
+from typing import Set
 
 from selenium import webdriver
 from selenium.webdriver.common.proxy import Proxy, ProxyType
 from user_agent import generate_user_agent
 
-from config import RPM, ERROR_COEFFICIENT, URL, REDIRECT_URL, \
+from config import RPM, ERROR_COEFFICIENT, URL, KEY_WORDS, \
     PROXY_HOST, PROXY_PORT, PROXY_USER, PROXY_PASSWORD
 
 
@@ -27,19 +28,30 @@ class Crawler:
 
         driver = webdriver.Chrome("./chromedriver", chrome_options=options,
                                   desired_capabilities=capabilities)
-
         driver.get(URL)
 
         elements = driver.find_elements_by_tag_name("a")
         for element in elements:
-            link = element.get_attribute('href')
-            if link.find(REDIRECT_URL) != -1:
+            if has_concurrences(KEY_WORDS, element.text):
                 element.click()
 
         driver.close()
 
 
-def get_delay():
+def form_word_set(word_string: str) -> Set[str]:
+    return {word.strip(',;').lower() for word in word_string.split(" ")}
+
+
+def has_concurrences(words1: str, words2: str) -> bool:
+    word_set1 = form_word_set(words1)
+    word_set2 = form_word_set(words2)
+    if word_set1.intersection(word_set2):
+        return True
+
+    return False
+
+
+def get_delay() -> float:
     return 60 / randint(round(RPM / (1 + ERROR_COEFFICIENT)),
                         round(RPM * (1 + ERROR_COEFFICIENT)))
 
@@ -51,4 +63,4 @@ if __name__ == "__main__":
         c.start()
 
         delay = get_delay()
-        sleep(1)
+        sleep(delay)
